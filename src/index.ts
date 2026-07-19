@@ -2,31 +2,62 @@
  * Opciones para la configuración de peticiones.
  */
 export interface FetchOptions extends RequestInit {
-  /** Tiempo máximo en milisegundos para esperar la respuesta. */
   timeout_ms?: number;
-  /** Número de intentos a realizar si la petición falla por error de servidor o red. */
   max_retries?: number;
 }
 
 /**
+ * Error controlado para cuando una petición excede el tiempo de espera configurado.
+ */
+export class TimeoutError extends Error {
+  constructor(timeout: number) {
+    super(`La petición fue cancelada porque excedió el tiempo límite de ${timeout}ms.`);
+    this.name = 'TimeoutError';
+  }
+}
+
+/**
+ * Tipos para los interceptores (Programación Orientada a Aspectos)
+ */
+export type RequestInterceptor = (config: FetchOptions) => FetchOptions | Promise<FetchOptions>;
+export type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
+
+/**
  * Clase principal cliente. Implementa un patrón de diseño orientado a objetos
- * para mantener la modularidad y permitir múltiples instancias con distintas configuraciones.
+ * para mantener la modularidad y permitir múltiples instancias.
  */
 export class SmartFetchClient {
   private default_config: FetchOptions;
+  
+  // Aspectos: Interceptores de petición y respuesta
+  private request_interceptors: RequestInterceptor[] = [];
+  private response_interceptors: ResponseInterceptor[] = [];
 
-  /**
-   * @param default_config - Opciones por defecto (Patrón de diseño Factory/Builder implícito).
-   */
   constructor(default_config: FetchOptions = {}) {
     this.default_config = default_config;
+  }
+
+  /** Permite agregar un interceptor que se ejecuta antes de cada peticion */
+  public add_request_interceptor(interceptor: RequestInterceptor): void {
+    this.request_interceptors.push(interceptor);
+  }
+
+  /** Permite agregar un interceptor que se ejecuta despues de cada peticion exitosa */
+  public add_response_interceptor(interceptor: ResponseInterceptor): void {
+    this.response_interceptors.push(interceptor);
   }
 
   /**
    * Método base para realizar peticiones.
    */
   public async request(url_path: string, options: FetchOptions = {}): Promise<Response> {
-    const final_options = { ...this.default_config, ...options };
+    let final_options = { ...this.default_config, ...options };
+    
+    // Ejecutar interceptores de peticion (AOP)
+    for (const interceptor of this.request_interceptors) {
+      final_options = await interceptor(final_options);
+    }
+
     const { timeout_ms, max_retries = 0, ...fetch_options } = final_options;
     
     let current_attempt = 0;
@@ -45,7 +76,7 @@ export class SmartFetchClient {
           }, timeout_ms);
         }
 
-        const response = await fetch(url_path, {
+        let response = await fetch(url_path, {
           ...fetch_options,
           signal,
         });
@@ -58,9 +89,18 @@ export class SmartFetchClient {
           throw new Error(`Error del servidor. Código de estado: ${response.status}`);
         }
 
+        // Ejecutar interceptores de respuesta (AOP)
+        for (const interceptor of this.response_interceptors) {
+          response = await interceptor(response);
+        }
+
         return response;
       } catch (error: any) {
-        last_error = error;
+        if (error.name === 'AbortError' && timeout_ms) {
+          last_error = new TimeoutError(timeout_ms);
+        } else {
+          last_error = error;
+        }
         current_attempt++;
       }
     }
@@ -68,12 +108,10 @@ export class SmartFetchClient {
     throw last_error;
   }
 
-  /** Alias para método GET */
   public async get(url_path: string, options: FetchOptions = {}): Promise<Response> {
     return this.request(url_path, { ...options, method: 'GET' });
   }
 
-  /** Alias para método POST */
   public async post(url_path: string, payload_data: any, options: FetchOptions = {}): Promise<Response> {
     return this.request(url_path, {
       ...options,
@@ -83,7 +121,6 @@ export class SmartFetchClient {
     });
   }
 
-  /** Alias para método PUT */
   public async put(url_path: string, payload_data: any, options: FetchOptions = {}): Promise<Response> {
     return this.request(url_path, {
       ...options,
@@ -93,7 +130,6 @@ export class SmartFetchClient {
     });
   }
 
-  /** Alias para método PATCH */
   public async patch(url_path: string, payload_data: any, options: FetchOptions = {}): Promise<Response> {
     return this.request(url_path, {
       ...options,
@@ -103,16 +139,13 @@ export class SmartFetchClient {
     });
   }
 
-  /** Alias para método DELETE */
   public async delete(url_path: string, options: FetchOptions = {}): Promise<Response> {
     return this.request(url_path, { ...options, method: 'DELETE' });
   }
 
-  /** Patrón Factory: Crea una nueva instancia con configuración independiente */
   public create(custom_config: FetchOptions): SmartFetchClient {
     return new SmartFetchClient({ ...this.default_config, ...custom_config });
   }
 }
 
-// Patrón Singleton: Exportamos una instancia única por defecto (al estilo Axios)
 export const smart_fetch = new SmartFetchClient();

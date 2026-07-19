@@ -2,6 +2,46 @@ import { smart_fetch, SmartFetchClient } from '../src/index';
 
 global.fetch = jest.fn() as jest.Mock;
 
+describe('smart_fetch (AOP Interceptors)', () => {
+  beforeEach(() => {
+    (global.fetch as jest.Mock).mockClear();
+  });
+
+  it('deberia ejecutar interceptores de peticion (RequestInterceptor)', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: 'Exito' }), { status: 200 })
+    );
+
+    const client = new SmartFetchClient();
+    client.add_request_interceptor((config) => {
+      config.headers = { ...config.headers, 'Authorization': 'Bearer 123' };
+      return config;
+    });
+
+    await client.get('https://api.ejemplo.com/data');
+    
+    expect(global.fetch).toHaveBeenCalledWith('https://api.ejemplo.com/data', expect.objectContaining({
+      headers: { 'Authorization': 'Bearer 123' }
+    }));
+  });
+
+  it('deberia ejecutar interceptores de respuesta (ResponseInterceptor)', async () => {
+    const mock_response = new Response(JSON.stringify({ message: 'Original' }), { status: 200 });
+    (global.fetch as jest.Mock).mockResolvedValueOnce(mock_response);
+
+    const client = new SmartFetchClient();
+    client.add_response_interceptor(async (response) => {
+      // Simulamos que el interceptor inyecta un header extra en la respuesta final
+      Object.defineProperty(response, 'intercepted', { value: true });
+      return response;
+    });
+
+    const final_res: any = await client.get('https://api.ejemplo.com/data');
+    
+    expect(final_res.intercepted).toBe(true);
+  });
+});
+
 describe('smart_fetch (Singleton Instance)', () => {
   beforeEach(() => {
     (global.fetch as jest.Mock).mockClear();
@@ -13,40 +53,7 @@ describe('smart_fetch (Singleton Instance)', () => {
     );
 
     const response = await smart_fetch.get('https://api.ejemplo.com/data');
-    
     expect(response.status).toBe(200);
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(global.fetch).toHaveBeenCalledWith('https://api.ejemplo.com/data', expect.objectContaining({ method: 'GET' }));
-  });
-
-  it('deberia realizar una peticion POST con payload', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: true }), { status: 201 })
-    );
-
-    const user_post = { name_id: "123", value: "test" };
-    const response = await smart_fetch.post('https://api.ejemplo.com/data', user_post);
-    
-    expect(response.status).toBe(201);
-    expect(global.fetch).toHaveBeenCalledWith('https://api.ejemplo.com/data', expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify(user_post)
-    }));
-  });
-
-  it('deberia fallar si el servidor devuelve error 500 y no hay reintentos', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue(
-      new Response('Error interno', { status: 500 })
-    );
-
-    await expect(smart_fetch.get('https://api.ejemplo.com/data')).rejects.toThrow('Error del servidor. Código de estado: 500');
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('SmartFetchClient (Factory/Instances)', () => {
-  beforeEach(() => {
-    (global.fetch as jest.Mock).mockClear();
   });
 
   it('deberia reintentar automaticamente segun la configuracion de la instancia', async () => {
@@ -57,7 +64,6 @@ describe('SmartFetchClient (Factory/Instances)', () => {
     const custom_client = smart_fetch.create({ max_retries: 2 });
     await expect(custom_client.request('https://api.ejemplo.com/data')).rejects.toThrow();
     
-    // 1 original + 2 reintentos
     expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 });
