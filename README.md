@@ -20,17 +20,15 @@ npm install
 npm run build
 ```
 
-*(Si se publicara en npm)*
-```bash
-npm install smart_fetch
-```
+> El comando de instalación definitivo se agregará cuando se reserve el nombre
+> del paquete en NPM.
 
 ## Cómo integrar en un proyecto
 
-Puedes importar la función `smart_fetch` en tu archivo de TypeScript o JavaScript de la siguiente manera:
+Puedes importar la instancia compartida `smartFetch` en tu archivo de TypeScript:
 
 ```typescript
-import { smart_fetch } from './src/index';
+import { smartFetch } from './src/index';
 ```
 
 ## Cómo hacer las distintas llamadas a las funciones de la librería
@@ -38,23 +36,24 @@ import { smart_fetch } from './src/index';
 ### GET con Timeout
 
 ```typescript
-const response = await smart_fetch('https://api.example.com/data', {
-  method: 'GET',
-  timeout_ms: 3000 // Cancela la petición si tarda más de 3 milisegundos
+const response = await smartFetch.get('https://api.example.com/data', {
+  timeoutMs: 3000 // Cancela la petición si tarda más de 3 segundos
 });
 ```
 
 ### POST con Reintentos
 
 ```typescript
-const payload_data = { name_id: "123", value: "test" };
+const payloadData = { nameId: "123", value: "test" };
 
-const response = await smart_fetch('https://api.example.com/data', {
-  method: 'POST',
-  body: JSON.stringify(payload_data),
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  max_retries: 2 // Intentará la petición original + 2 veces en caso de error de servidor
-});
+const response = await smartFetch.post(
+  'https://api.example.com/data',
+  payloadData,
+  {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    maxRetries: 2 // Intento original + 2 reintentos
+  }
+);
 ```

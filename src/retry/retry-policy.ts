@@ -20,7 +20,7 @@ export interface RetryPolicy {
    * @param context - Información del intento fallido.
    * @returns `true` cuando el fallo es recuperable.
    */
-  should_retry(context: RetryContext): boolean;
+  shouldRetry(context: RetryContext): boolean;
 
   /**
    * Calcula cuánto esperar antes del siguiente intento.
@@ -28,7 +28,7 @@ export interface RetryPolicy {
    * @param context - Información del intento fallido.
    * @returns Tiempo de espera en milisegundos.
    */
-  get_delay_ms(context: RetryContext): number;
+  getDelayMs(context: RetryContext): number;
 }
 
 /**
@@ -37,7 +37,7 @@ export interface RetryPolicy {
  * @param error - Valor capturado durante la petición.
  * @returns `true` cuando el valor representa un `AbortError`.
  */
-function is_abort_error(error: unknown): boolean {
+function isAbortError(error: unknown): boolean {
   return (
     typeof error === 'object'
     && error !== null
@@ -56,21 +56,21 @@ export class DefaultRetryPolicy implements RetryPolicy {
   /**
    * Crea la política predeterminada.
    *
-   * @param base_delay_ms - Espera base para el backoff exponencial.
+   * @param baseDelayMs - Espera base para el backoff exponencial.
    */
-  public constructor(private readonly base_delay_ms = 0) {}
+  public constructor(private readonly baseDelayMs = 0) {}
 
   /** @inheritdoc */
-  public should_retry(context: RetryContext): boolean {
+  public shouldRetry(context: RetryContext): boolean {
     if (context.response !== undefined) {
       return context.response.status >= 500 && context.response.status <= 599;
     }
 
-    return context.error !== undefined && !is_abort_error(context.error);
+    return context.error !== undefined && !isAbortError(context.error);
   }
 
   /** @inheritdoc */
-  public get_delay_ms(context: RetryContext): number {
-    return this.base_delay_ms * (2 ** context.attempt);
+  public getDelayMs(context: RetryContext): number {
+    return this.baseDelayMs * (2 ** context.attempt);
   }
 }
