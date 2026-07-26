@@ -1,15 +1,31 @@
 {
-  "name": "smartfetch",
+  "name": "@aryacarpavila/smartfetch",
   "version": "1.0.0",
-  "description": "",
+  "description": "A resilient fetch wrapper with interceptors, retries, and timeouts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "jest"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "fetch",
+    "resilience",
+    "retry",
+    "timeout",
+    "interceptors",
+    "api",
+    "client",
+    "smartfetch"
+  ],
+  "author": "Arya Carpavila",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aryacarpavila/SmartFetch.git"
+  },
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
