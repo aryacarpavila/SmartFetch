@@ -68,7 +68,7 @@ describe('SmartFetchClient - resiliencia', () => {
 
     const response = await new SmartFetchClient().get(
       'https://api.ejemplo.com/data',
-      { max_retries: 2 },
+      { maxRetries: 2 },
     );
 
     expect(response.status).toBe(200);
@@ -84,7 +84,7 @@ describe('SmartFetchClient - resiliencia', () => {
     await expect(
       new SmartFetchClient().get(
         'https://api.ejemplo.com/data',
-        { max_retries: 2 },
+        { maxRetries: 2 },
       ),
     ).rejects.toBeInstanceOf(HttpError);
 
@@ -98,7 +98,7 @@ describe('SmartFetchClient - resiliencia', () => {
 
     const response = await new SmartFetchClient().get(
       'https://api.ejemplo.com/data',
-      { max_retries: 1 },
+      { maxRetries: 1 },
     );
 
     expect(await response.text()).toBe('Disponible');
@@ -112,7 +112,7 @@ describe('SmartFetchClient - resiliencia', () => {
 
     const response = await new SmartFetchClient().get(
       'https://api.ejemplo.com/data',
-      { max_retries: 3 },
+      { maxRetries: 3 },
     );
 
     expect(response.status).toBe(404);
@@ -125,11 +125,11 @@ describe('SmartFetchClient - resiliencia', () => {
 
     const request = new SmartFetchClient().get(
       'https://api.ejemplo.com/lento',
-      { timeout_ms: 100 },
+      { timeoutMs: 100 },
     );
     const expected_rejection = expect(request).rejects.toMatchObject({
       name: 'TimeoutError',
-      timeout_ms: 100,
+      timeoutMs: 100,
     });
 
     await jest.advanceTimersByTimeAsync(100);
@@ -145,7 +145,7 @@ describe('SmartFetchClient - resiliencia', () => {
 
     const response = await new SmartFetchClient().get(
       'https://api.ejemplo.com/rapido',
-      { timeout_ms: 1_000 },
+      { timeoutMs: 1_000 },
     );
 
     expect(response.status).toBe(200);
@@ -159,7 +159,7 @@ describe('SmartFetchClient - resiliencia', () => {
     const request = new SmartFetchClient().get(
       'https://api.ejemplo.com/data',
       {
-        max_retries: 3,
+        maxRetries: 3,
         signal: controller.signal,
       },
     );
@@ -178,7 +178,7 @@ describe('SmartFetchClient - resiliencia', () => {
       new SmartFetchClient().get(
         'https://api.ejemplo.com/data',
         {
-          max_retries: 3,
+          maxRetries: 3,
           signal: controller.signal,
         },
       ),
@@ -189,9 +189,9 @@ describe('SmartFetchClient - resiliencia', () => {
 
   it('no reintenta errores producidos por un interceptor de respuesta', async () => {
     fetch_mock.mockResolvedValue(new Response('Correcto', { status: 200 }));
-    const client = new SmartFetchClient({ max_retries: 3 });
+    const client = new SmartFetchClient({ maxRetries: 3 });
 
-    client.add_response_interceptor(() => {
+    client.addResponseInterceptor(() => {
       throw new Error('Falló el interceptor');
     });
 
@@ -204,11 +204,11 @@ describe('SmartFetchClient - resiliencia', () => {
 
   it.each([0, -1, 1.5, Number.POSITIVE_INFINITY])(
     'rechaza el timeout inválido %s',
-    async (timeout_ms) => {
+    async (timeoutMs) => {
       await expect(
         new SmartFetchClient().get(
           'https://api.ejemplo.com/data',
-          { timeout_ms },
+          { timeoutMs },
         ),
       ).rejects.toBeInstanceOf(ConfigurationError);
 
@@ -218,11 +218,11 @@ describe('SmartFetchClient - resiliencia', () => {
 
   it.each([-1, 1.5, Number.POSITIVE_INFINITY])(
     'rechaza la cantidad de reintentos inválida %s',
-    async (max_retries) => {
+    async (maxRetries) => {
       await expect(
         new SmartFetchClient().get(
           'https://api.ejemplo.com/data',
-          { max_retries },
+          { maxRetries },
         ),
       ).rejects.toBeInstanceOf(ConfigurationError);
 
@@ -236,13 +236,16 @@ describe('SmartFetchClient - resiliencia', () => {
       .mockRejectedValueOnce(new TypeError('fetch failed'))
       .mockResolvedValueOnce(new Response('Recuperado', { status: 200 }));
 
-    const retry_policy: RetryPolicy = {
-      should_retry: jest.fn(() => true),
-      get_delay_ms: jest.fn(() => 250),
+    const retryPolicy: RetryPolicy = {
+      shouldRetry: jest.fn(() => true),
+      getDelayMs: jest.fn(() => 250),
     };
-    const request = new SmartFetchClient({}, retry_policy).get(
+    const request = new SmartFetchClient(
+      {},
+      { retryPolicy },
+    ).get(
       'https://api.ejemplo.com/data',
-      { max_retries: 1 },
+      { maxRetries: 1 },
     );
 
     await jest.advanceTimersByTimeAsync(249);
@@ -258,14 +261,17 @@ describe('SmartFetchClient - resiliencia', () => {
     fetch_mock.mockRejectedValue(new TypeError('fetch failed'));
 
     const controller = new AbortController();
-    const retry_policy: RetryPolicy = {
-      should_retry: () => true,
-      get_delay_ms: () => 1_000,
+    const retryPolicy: RetryPolicy = {
+      shouldRetry: () => true,
+      getDelayMs: () => 1_000,
     };
-    const request = new SmartFetchClient({}, retry_policy).get(
+    const request = new SmartFetchClient(
+      {},
+      { retryPolicy },
+    ).get(
       'https://api.ejemplo.com/data',
       {
-        max_retries: 2,
+        maxRetries: 2,
         signal: controller.signal,
       },
     );
@@ -281,15 +287,18 @@ describe('SmartFetchClient - resiliencia', () => {
   it('rechaza una espera inválida producida por la estrategia', async () => {
     fetch_mock.mockRejectedValue(new TypeError('fetch failed'));
 
-    const retry_policy: RetryPolicy = {
-      should_retry: () => true,
-      get_delay_ms: () => -1,
+    const retryPolicy: RetryPolicy = {
+      shouldRetry: () => true,
+      getDelayMs: () => -1,
     };
 
     await expect(
-      new SmartFetchClient({}, retry_policy).get(
+      new SmartFetchClient(
+        {},
+        { retryPolicy },
+      ).get(
         'https://api.ejemplo.com/data',
-        { max_retries: 1 },
+        { maxRetries: 1 },
       ),
     ).rejects.toBeInstanceOf(ConfigurationError);
   });
@@ -299,6 +308,6 @@ describe('SmartFetchClient - resiliencia', () => {
 
     expect(error).toBeInstanceOf(Error);
     expect(error.name).toBe('TimeoutError');
-    expect(error.timeout_ms).toBe(500);
+    expect(error.timeoutMs).toBe(500);
   });
 });

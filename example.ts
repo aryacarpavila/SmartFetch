@@ -1,39 +1,41 @@
-import { smart_fetch } from './src/index';
+import { smartFetch } from './src/index';
 
-async function run_example() {
-  console.log("Iniciando peticiones con SmartFetch...");
+/**
+ * Ejecuta un ejemplo de GET con timeout, reintentos e interceptores.
+ */
+async function runExample(): Promise<void> {
+  smartFetch.addRequestInterceptor((config) => {
+    console.log('[Interceptor] Agregando autorización a la petición');
+    const headers = new Headers(config.headers);
+    headers.set('Authorization', 'Bearer MI_TOKEN_SECRETO');
 
-  // AOP: Interceptor de Peticion (Aspecto que inyecta headers automaticamente)
-  smart_fetch.add_request_interceptor((config) => {
-    console.log("[Interceptor] Interceptando peticion y agregando token de autorizacion...");
-    config.headers = {
-      ...config.headers,
-      'Authorization': 'Bearer MI_TOKEN_SECRETO'
-    };
-    return config;
+    return { ...config, headers };
   });
 
-  // AOP: Interceptor de Respuesta (Aspecto que procesa datos automaticamente)
-  smart_fetch.add_response_interceptor(async (response) => {
-    console.log("[Interceptor] Interceptando respuesta antes de entregarla al usuario...");
-    // Podrias transformar la respuesta aqui si quisieras
+  smartFetch.addResponseInterceptor((response) => {
+    console.log('[Interceptor] Respuesta recibida:', response.status);
     return response;
   });
 
   try {
-    const get_response = await smart_fetch.get('https://jsonplaceholder.typicode.com/posts/1', {
-      timeout_ms: 2000,
-      max_retries: 3
-    });
+    const response = await smartFetch.get(
+      'https://jsonplaceholder.typicode.com/posts/1',
+      {
+        timeoutMs: 2_000,
+        maxRetries: 3,
+      },
+    );
 
-    if (get_response.ok) {
-      const json_data = await get_response.json();
-      console.log("Datos del GET obtenidos:", json_data.title);
+    if (!response.ok) {
+      console.error('La API respondió con el estado:', response.status);
+      return;
     }
 
-  } catch (error) {
-    console.error("La peticion ha fallado definitivamente:", error);
+    const data: unknown = await response.json();
+    console.log('Datos obtenidos:', data);
+  } catch (error: unknown) {
+    console.error('La petición falló definitivamente:', error);
   }
 }
 
-run_example();
+void runExample();
