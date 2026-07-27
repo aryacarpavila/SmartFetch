@@ -1,6 +1,6 @@
 {
-  "name": "@aryacarpavila/smartfetch",
-  "version": "1.0.0",
+  "name": "@caldera18/smartfetch",
+  "version": "1.0.1",
   "description": "A resilient fetch wrapper with interceptors, retries, and timeouts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

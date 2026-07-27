@@ -21,13 +21,13 @@ depende de la implementación nativa de `fetch`.
 Para instalar la librería desde NPM, ejecuta el siguiente comando:
 
 ```bash
-npm install @aryacarpavila/smartfetch
+npm install @caldera18/smartfetch
 ```
 
 Luego puedes integrarla en tu proyecto importando la instancia compartida de la librería:
 
 ```typescript
-import { smartFetch } from '@aryacarpavila/smartfetch';
+import { smartFetch } from '@caldera18/smartfetch';
 ```
 
 ## Uso de los métodos HTTP (async/await)
@@ -127,7 +127,7 @@ smartFetch.removeResponseInterceptor(responseInterceptorId);
 SmartFetch exporta clases de errores personalizadas para facilitar el manejo estructurado en los bloques `catch`:
 
 ```typescript
-import { smartFetch, HttpError, TimeoutError, ConfigurationError } from '@aryacarpavila/smartfetch';
+import { smartFetch, HttpError, TimeoutError, ConfigurationError } from '@caldera18/smartfetch';
 
 try {
   await smartFetch.get('https://api.example.com/data', { timeoutMs: 100 });
