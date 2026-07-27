@@ -4,6 +4,10 @@
 
 SmartFetch es una librería que actúa como un wrapper avanzado sobre la API nativa `fetch` de JavaScript. Proporciona una interfaz limpia, resiliente y altamente configurable para realizar consultas a APIs externas sin acoplarse a dependencias adicionales.
 
+La explicación completa de la arquitectura, patrones, pruebas, GitFlow,
+publicación y guía de defensa se encuentra en
+[`docs/IMPLEMENTACION_Y_DEFENSA.md`](https://github.com/aryacarpavila/SmartFetch/blob/main/docs/IMPLEMENTACION_Y_DEFENSA.md).
+
 ## Características
 
 - **Soporte completo HTTP:** GET, POST, PUT, PATCH y DELETE.
