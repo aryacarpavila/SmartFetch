@@ -2,6 +2,12 @@
 
 Todos los cambios relevantes de SmartFetch se documentan en este archivo.
 
+## 1.0.1 - 2026-07-26
+
+### Cambiado
+
+- El paquete publicable utiliza el scope NPM `@caldera18`.
+
 ## 1.0.0 - 2026-07-26
 
 ### Añadido
