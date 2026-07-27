@@ -1,5 +1,7 @@
 # SmartFetch
 
+[![CI](https://github.com/aryacarpavila/SmartFetch/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/aryacarpavila/SmartFetch/actions/workflows/ci.yml)
+
 SmartFetch es una librería que actúa como un wrapper avanzado sobre la API nativa `fetch` de JavaScript. Proporciona una interfaz limpia, resiliente y altamente configurable para realizar consultas a APIs externas sin acoplarse a dependencias adicionales.
 
 ## Características
