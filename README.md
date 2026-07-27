@@ -1,60 +1,145 @@
 # SmartFetch
 
-SmartFetch es una librería que actúa como un wrapper avanzado sobre la API nativa `fetch` de JavaScript. Proporciona una interfaz limpia, resiliente y altamente configurable para realizar consultas a APIs externas sin acoplarse a otras librerías y dependencias externas.
+[![CI](https://github.com/aryacarpavila/SmartFetch/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/aryacarpavila/SmartFetch/actions/workflows/ci.yml)
+
+SmartFetch es una librería que actúa como un wrapper avanzado sobre la API nativa `fetch` de JavaScript. Proporciona una interfaz limpia, resiliente y altamente configurable para realizar consultas a APIs externas sin acoplarse a dependencias adicionales.
 
 ## Características
 
-- Configuración de un tiempo máximo de espera (timeout) para las peticiones.
-- Reintento automático ante errores de servidor (5xx) o problemas de red.
-- Soporta todos los métodos HTTP principales (GET, POST, PUT, PATCH, DELETE).
-- Uso sencillo mediante promesas o `async/await`.
+- **Soporte completo HTTP:** GET, POST, PUT, PATCH y DELETE.
+- **Resiliencia:** Reintento automático ante errores de servidor (5xx) o problemas de red.
+- **Timeouts:** Configuración de un tiempo máximo de espera y cancelación automática.
+- **Interceptores:** Interceptores de request y response para modificar encabezados, loguear datos, etc.
+- **Manejo de errores:** Tipos de error específicos (`HttpError`, `TimeoutError`, `ConfigurationError`).
+- **Flexibilidad:** Uso sencillo mediante promesas (`.then()`) o `async/await`.
 
-## Cómo descargar la librería con NPM
+## Instalación e integración
 
-*(Nota: Este paquete es un proyecto de ejemplo, para descargarlo localmente usa)*
+SmartFetch requiere Node.js 18 o superior cuando se utiliza en Node, ya que
+depende de la implementación nativa de `fetch`.
+
+Para instalar la librería desde NPM, ejecuta el siguiente comando:
 
 ```bash
-git clone https://github.com/TU_USUARIO/SmartFetch.git
-cd SmartFetch
-npm install
-npm run build
+npm install @aryacarpavila/smartfetch
 ```
 
-*(Si se publicara en npm)*
-```bash
-npm install smart_fetch
-```
-
-## Cómo integrar en un proyecto
-
-Puedes importar la función `smart_fetch` en tu archivo de TypeScript o JavaScript de la siguiente manera:
+Luego puedes integrarla en tu proyecto importando la instancia compartida de la librería:
 
 ```typescript
-import { smart_fetch } from './src/index';
+import { smartFetch } from '@aryacarpavila/smartfetch';
 ```
 
-## Cómo hacer las distintas llamadas a las funciones de la librería
+## Uso de los métodos HTTP (async/await)
 
-### GET con Timeout
+### GET
+```typescript
+try {
+  const response = await smartFetch.get('https://api.example.com/users');
+  console.log('Usuarios:', await response.json());
+} catch (error) {
+  console.error('Error:', error);
+}
+```
+
+### POST
+```typescript
+const newUser = { name: "Alice", role: "Admin" };
+const response = await smartFetch.post('https://api.example.com/users', newUser);
+```
+
+### PUT
+```typescript
+const updatedUser = { name: "Alice", role: "SuperAdmin" };
+const response = await smartFetch.put('https://api.example.com/users/1', updatedUser);
+```
+
+### PATCH
+```typescript
+const partialUpdate = { role: "User" };
+const response = await smartFetch.patch('https://api.example.com/users/1', partialUpdate);
+```
+
+### DELETE
+```typescript
+const response = await smartFetch.delete('https://api.example.com/users/1');
+```
+
+## Uso con Promesas (.then)
+
+También puedes utilizar la librería utilizando la sintaxis tradicional de promesas:
 
 ```typescript
-const response = await smart_fetch('https://api.example.com/data', {
-  method: 'GET',
-  timeout_ms: 3000 // Cancela la petición si tarda más de 3 milisegundos
+smartFetch.get('https://api.example.com/users')
+  .then(response => response.json())
+  .then(data => console.log('Datos recibidos:', data))
+  .catch(error => console.error('Falló la petición:', error));
+```
+
+## Características Avanzadas
+
+### Timeout (Tiempo de espera)
+
+Puedes establecer un tiempo límite por petición. Si la petición tarda más de este tiempo, será cancelada y lanzará un `TimeoutError`.
+
+```typescript
+const response = await smartFetch.get('https://api.example.com/data', {
+  timeoutMs: 3000 // Cancela si demora más de 3 segundos
 });
 ```
 
-### POST con Reintentos
+### Reintentos (Retries)
+
+Configura cuántas veces intentar de nuevo en caso de un fallo de red o errores del servidor (códigos 5xx).
 
 ```typescript
-const payload_data = { name_id: "123", value: "test" };
-
-const response = await smart_fetch('https://api.example.com/data', {
-  method: 'POST',
-  body: JSON.stringify(payload_data),
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  max_retries: 2 // Intentará la petición original + 2 veces en caso de error de servidor
+const response = await smartFetch.get('https://api.example.com/data', {
+  maxRetries: 3 // Intento original + 3 reintentos adicionales
 });
+```
+
+### Interceptores
+
+Puedes agregar interceptores para modificar las peticiones antes de que se envíen, o analizar las respuestas antes de que se devuelvan al usuario.
+
+```typescript
+// Modificar todas las peticiones
+const requestInterceptorId = smartFetch.addRequestInterceptor((config) => {
+  const headers = new Headers(config.headers);
+  headers.set('Authorization', 'Bearer my-token');
+
+  return { ...config, headers };
+});
+
+// Analizar todas las respuestas
+const responseInterceptorId = smartFetch.addResponseInterceptor((response) => {
+  console.log(`[Response] ${response.status} from ${response.url}`);
+  return response;
+});
+
+// Retirar los interceptores cuando ya no sean necesarios
+smartFetch.removeRequestInterceptor(requestInterceptorId);
+smartFetch.removeResponseInterceptor(responseInterceptorId);
+```
+
+### Manejo de Errores
+
+SmartFetch exporta clases de errores personalizadas para facilitar el manejo estructurado en los bloques `catch`:
+
+```typescript
+import { smartFetch, HttpError, TimeoutError, ConfigurationError } from '@aryacarpavila/smartfetch';
+
+try {
+  await smartFetch.get('https://api.example.com/data', { timeoutMs: 100 });
+} catch (error) {
+  if (error instanceof TimeoutError) {
+    console.error('La petición superó el tiempo máximo establecido.');
+  } else if (error instanceof HttpError) {
+    console.error(`Error del servidor: código ${error.status}`);
+  } else if (error instanceof ConfigurationError) {
+    console.error(`Error de configuración: ${error.message}`);
+  } else {
+    console.error('Error inesperado:', error);
+  }
+}
 ```

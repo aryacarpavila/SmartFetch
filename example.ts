@@ -1,24 +1,41 @@
-import { smart_fetch } from './src/index';
+import { smartFetch } from './src/index';
 
-async function run_example() {
-  console.log("Iniciando peticion GET con SmartFetch...");
+/**
+ * Ejecuta un ejemplo de GET con timeout, reintentos e interceptores.
+ */
+async function runExample(): Promise<void> {
+  smartFetch.addRequestInterceptor((config) => {
+    console.log('[Interceptor] Agregando autorización a la petición');
+    const headers = new Headers(config.headers);
+    headers.set('Authorization', 'Bearer MI_TOKEN_SECRETO');
+
+    return { ...config, headers };
+  });
+
+  smartFetch.addResponseInterceptor((response) => {
+    console.log('[Interceptor] Respuesta recibida:', response.status);
+    return response;
+  });
 
   try {
-    const response = await smart_fetch('https://jsonplaceholder.typicode.com/posts/1', {
-      method: 'GET',
-      timeout_ms: 2000,
-      max_retries: 3
-    });
+    const response = await smartFetch.get(
+      'https://jsonplaceholder.typicode.com/posts/1',
+      {
+        timeoutMs: 2_000,
+        maxRetries: 3,
+      },
+    );
 
-    if (response.ok) {
-      const json_data = await response.json();
-      console.log("Datos obtenidos:", json_data);
-    } else {
-      console.error("Error en la peticion con codigo:", response.status);
+    if (!response.ok) {
+      console.error('La API respondió con el estado:', response.status);
+      return;
     }
-  } catch (error) {
-    console.error("La peticion ha fallado definitivamente:", error);
+
+    const data: unknown = await response.json();
+    console.log('Datos obtenidos:', data);
+  } catch (error: unknown) {
+    console.error('La petición falló definitivamente:', error);
   }
 }
 
-run_example();
+void runExample();
