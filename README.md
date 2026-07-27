@@ -13,6 +13,9 @@ SmartFetch es una librería que actúa como un wrapper avanzado sobre la API nat
 
 ## Instalación e integración
 
+SmartFetch requiere Node.js 18 o superior cuando se utiliza en Node, ya que
+depende de la implementación nativa de `fetch`.
+
 Para instalar la librería desde NPM, ejecuta el siguiente comando:
 
 ```bash
@@ -99,19 +102,22 @@ Puedes agregar interceptores para modificar las peticiones antes de que se enví
 
 ```typescript
 // Modificar todas las peticiones
-smartFetch.interceptors.request.use((url, options) => {
-  options.headers = {
-    ...options.headers,
-    'Authorization': 'Bearer my-token'
-  };
-  return { url, options };
+const requestInterceptorId = smartFetch.addRequestInterceptor((config) => {
+  const headers = new Headers(config.headers);
+  headers.set('Authorization', 'Bearer my-token');
+
+  return { ...config, headers };
 });
 
 // Analizar todas las respuestas
-smartFetch.interceptors.response.use((response) => {
+const responseInterceptorId = smartFetch.addResponseInterceptor((response) => {
   console.log(`[Response] ${response.status} from ${response.url}`);
   return response;
 });
+
+// Retirar los interceptores cuando ya no sean necesarios
+smartFetch.removeRequestInterceptor(requestInterceptorId);
+smartFetch.removeResponseInterceptor(responseInterceptorId);
 ```
 
 ### Manejo de Errores

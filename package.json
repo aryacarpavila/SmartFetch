@@ -4,12 +4,26 @@
   "description": "A resilient fetch wrapper with interceptors, retries, and timeouts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
-    "test": "jest"
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc",
+    "test": "jest --runInBand",
+    "test:coverage": "jest --coverage --runInBand",
+    "check:example": "tsc --project tsconfig.example.json --noEmit",
+    "audit:production": "npm audit --omit=dev",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run test:coverage && npm run check:example && npm run audit:production"
   },
   "keywords": [
     "fetch",
@@ -21,17 +35,50 @@
     "client",
     "smartfetch"
   ],
-  "author": "Arya Carpavila",
+  "author": "Arya Carpavila and Mauricio Caldera",
+  "contributors": [
+    "Arya Carpavila <anfiguera.23@est.ucab.edu.ve>",
+    "Mauricio Caldera <83850044+caldera18@users.noreply.github.com>"
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/aryacarpavila/SmartFetch.git"
+    "url": "git+https://github.com/aryacarpavila/SmartFetch.git"
+  },
+  "homepage": "https://github.com/aryacarpavila/SmartFetch#readme",
+  "bugs": {
+    "url": "https://github.com/aryacarpavila/SmartFetch/issues"
   },
   "license": "ISC",
   "type": "commonjs",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.ts"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 90,
+        "functions": 90,
+        "lines": 90,
+        "statements": 90
+      }
+    }
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "jest": "^30.4.2",
-    "ts-jest": "^29.4.11",
+    "ts-jest": "^29.4.12",
     "typescript": "^5.9.3"
   }
 }
